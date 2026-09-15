@@ -131,7 +131,11 @@ func (m Model) renderDetail() string {
 		field("Cmdline:", orDash(info.Cmdline))
 		field("Executable:", orDash(info.Exe))
 		field("Cwd:", orDash(info.Cwd))
-		field("Threads:", strconv.Itoa(info.NumThreads))
+		threads := "-"
+		if info.NumThreads > 0 {
+			threads = strconv.Itoa(info.NumThreads)
+		}
+		field("Threads:", threads)
 		field("Open files:", strconv.Itoa(info.OpenFiles))
 		field("RSS:", fmt.Sprintf("%.1f MiB", float64(info.RSSBytes)/1024/1024))
 		if !info.StartTime.IsZero() {

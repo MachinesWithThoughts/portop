@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>portop</title>
-<meta name="description" content="portop is a terminal UI to see which process, systemd unit or Docker container is using a TCP/UDP port, in the style of htop.">
+<meta name="description" content="portop is an htop-style terminal UI for TCP/UDP ports on Linux and macOS. Find the owning process, inspect it, or stop it. Linux packages include DEB and RPM.">
 <meta property="og:title" content="portop">
 <meta property="og:description" content="An htop-style terminal UI for TCP/UDP ports — process, systemd unit and Docker container in one dashboard, with baseline drift detection, themes and remappable keys.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 256 256%22><rect width=%22256%22 height=%22256%22 rx=%2256%22 fill=%22%231a1409%22/><rect x=%2270%22 y=%2260%22 width=%2228%22 height=%2270%22 rx=%228%22 fill=%22%23ffb000%22/><rect x=%22158%22 y=%2260%22 width=%2228%22 height=%2270%22 rx=%228%22 fill=%22%23ffb000%22/><path d=%22M60 118h136v34a68 68 0 0 1-136 0z%22 fill=%22%23c98a2e%22/><rect x=%22116%22 y=%22182%22 width=%2224%22 height=%2240%22 rx=%226%22 fill=%22%23ffb000%22/></svg>">
@@ -320,6 +320,19 @@
   .comment { color: var(--rust-dim); }
   .install-note { color: var(--rust); font-size: 0.88rem; font-family: var(--serif); }
 
+  .first-run {
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    color: var(--parchment);
+    font-family: var(--serif);
+  }
+  .first-run summary { cursor: pointer; color: var(--phosphor); font-family: var(--mono); }
+  .first-run li { margin: 12px 0; line-height: 1.7; }
+  .first-run p { line-height: 1.7; }
+  .platform-note { color: var(--rust); font-family: var(--serif); line-height: 1.7; }
+
   /* ---- keybinding reference ---- */
   .table-scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 8px; }
   table.keys { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-family: var(--mono); min-width: 460px; }
@@ -387,9 +400,9 @@
   <div class="hero-inner">
     <p class="eyebrow">htop, but for ports</p>
     <h1 class="wordmark"><span class="port">port</span><span class="op">op</span><span class="cursor" aria-hidden="true">&nbsp;</span></h1>
-    <p class="tagline">See which <strong>process</strong>, which <strong>systemd unit</strong>, which <strong>Docker container</strong> is using a port — and kill it, right from your keyboard.</p>
+    <p class="tagline">See which <strong>process</strong> is using a port on <strong>Linux or macOS</strong> — and stop it right from your keyboard. On Linux, see its <strong>systemd unit</strong> and <strong>Docker container</strong> too.</p>
     <div class="cta-row">
-      <a class="btn primary" href="https://github.com/padovanl/portop#-installation">Get portop</a>
+      <a class="btn primary" href="#install">Get portop</a>
       <a class="btn secondary" href="https://github.com/padovanl/portop">View source</a>
     </div>
     <div class="badges">
@@ -520,10 +533,12 @@
 
     <section id="install" class="section install">
       <h2>Installation</h2>
-      <p class="section-lede">Linux only — portop reads <code>/proc/net</code> directly, which doesn't exist on macOS or Windows.</p>
+      <p class="section-lede">Linux and macOS, on Intel/AMD and ARM64. Linux packages are available as .deb and .rpm.</p>
       <div class="install-tabs" role="tablist">
         <button class="install-tab" role="tab" aria-selected="true" data-target="tab-curl">curl</button>
         <button class="install-tab" role="tab" aria-selected="false" data-target="tab-deb">.deb</button>
+        <button class="install-tab" role="tab" aria-selected="false" data-target="tab-rpm">.rpm</button>
+        <button class="install-tab" role="tab" aria-selected="false" data-target="tab-mac">macOS</button>
         <button class="install-tab" role="tab" aria-selected="false" data-target="tab-bin">binary</button>
         <button class="install-tab" role="tab" aria-selected="false" data-target="tab-src">from source</button>
       </div>
@@ -536,6 +551,38 @@ curl -fsSL https://raw.githubusercontent.com/padovanl/portop/main/install.sh | s
 curl -fLO https://github.com/padovanl/portop/releases/latest/download/portop_&lt;version&gt;_linux_amd64.deb
 sudo dpkg -i portop_&lt;version&gt;_linux_amd64.deb</pre>
       </div>
+      <div id="tab-rpm" class="install-panel">
+        <pre><span class="comment"># download the .rpm for your architecture from Releases</span>
+sudo dnf install ./portop_&lt;version&gt;_linux_amd64.rpm
+<span class="comment"># openSUSE: sudo zypper install ./portop_&lt;version&gt;_linux_amd64.rpm</span></pre>
+      </div>
+      <div id="tab-mac" class="install-panel">
+        <p class="platform-note">Apple Silicon and Intel: the installer selects the matching archive and verifies its checksum.</p>
+        <pre><span class="comment"># automatic installation</span>
+curl -fsSL https://raw.githubusercontent.com/padovanl/portop/main/install.sh | sh
+portop</pre>
+        <details class="first-run">
+          <summary>Prefer a manual download?</summary>
+          <p>Use <code>darwin_arm64</code> for Apple Silicon or <code>darwin_amd64</code> for Intel. Replace <code>&lt;version&gt;</code> with the release number.</p>
+          <pre>archive="portop_&lt;version&gt;_darwin_arm64.tar.gz" <span class="comment"># Intel: darwin_amd64</span>
+curl -fLO "https://github.com/padovanl/portop/releases/latest/download/$archive"
+tar -xzf "$archive"
+sudo mkdir -p /usr/local/bin
+sudo install -m 755 portop /usr/local/bin/portop
+portop</pre>
+        </details>
+        <details class="first-run">
+          <summary>First launch: if macOS blocks portop</summary>
+          <p>The binaries are not notarized by Apple. A browser download may trigger Gatekeeper. After checking that the binary comes from this repository's release, approve this app:</p>
+          <ol>
+            <li>Run <code>portop</code>. If macOS shows <strong>“portop” Not Opened</strong>, click <strong>Done</strong>.</li>
+            <li>Open <strong>System Settings → Privacy &amp; Security</strong>, find the message about portop, and click <strong>Open Anyway</strong> (or <strong>Allow Anyway</strong>, depending on macOS).</li>
+            <li>Run <code>portop</code> again if prompted, confirm <strong>Open Anyway</strong>, and authenticate when macOS asks.</li>
+          </ol>
+          <p class="install-note">Adapted from the <a href="https://padovanl.github.io/pkgtui/#install">pkgtui first-launch guide</a>. See <a href="https://support.apple.com/en-us/102445">Apple's instructions</a> for your macOS version.</p>
+        </details>
+        <p class="platform-note">Uses the system's <code>lsof</code> and <code>ps</code>. Run <code>sudo portop</code> to include other users' processes; some sockets may otherwise be missing. Systemd, Docker Desktop VM process metadata and thread counts are unavailable on macOS.</p>
+      </div>
       <div id="tab-bin" class="install-panel">
         <pre>curl -fLO https://github.com/padovanl/portop/releases/latest/download/portop_&lt;version&gt;_linux_amd64.tar.gz
 tar -xzf portop_&lt;version&gt;_linux_amd64.tar.gz
@@ -544,7 +591,7 @@ sudo install -m 755 portop /usr/local/bin/portop</pre>
       <div id="tab-src" class="install-panel">
         <pre>go install github.com/padovanl/portop/cmd/portop@latest</pre>
       </div>
-      <p class="install-note">arm64 builds and checksums on the <a href="https://github.com/padovanl/portop/releases/latest">releases page</a>.</p>
+      <p class="install-note">Linux and macOS archives for amd64/arm64, Linux .deb/.rpm packages and checksums on the <a href="https://github.com/padovanl/portop/releases/latest">releases page</a>.</p>
     </section>
 
     <section id="keys" class="section">
@@ -578,7 +625,7 @@ sudo install -m 755 portop /usr/local/bin/portop</pre>
 
 <footer>
   <div class="wrap">
-    <span class="tag">MIT licensed · Linux only</span>
+    <span class="tag">MIT licensed · Linux + macOS</span>
     <nav>
       <a class="foot-chip" href="https://github.com/padovanl/portop">GitHub</a>
       <a class="foot-chip" href="https://github.com/padovanl/portop/releases">Releases</a>

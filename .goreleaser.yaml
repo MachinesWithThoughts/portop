@@ -12,11 +12,9 @@ builds:
     binary: portop
     env:
       - CGO_ENABLED=0
-    # Linux only: portop reads /proc/net/{tcp,udp,...} directly, which
-    # doesn't exist on macOS/Windows. A darwin build would compile fine
-    # and then fail at runtime on every single scan, so it's not offered.
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
@@ -35,7 +33,7 @@ archives:
       - LICENSE
 
 nfpms:
-  - id: deb
+  - id: packages
     ids: [portop]
     package_name: portop
     vendor: portop
@@ -47,6 +45,7 @@ nfpms:
     license: MIT
     formats:
       - deb
+      - rpm
     section: net
     priority: optional
     bindir: /usr/bin

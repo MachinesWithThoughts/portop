@@ -66,4 +66,24 @@ jobs:
       - name: verify expected artifacts were produced
         run: |
           set -e
-          ls dist/*.deb dist/*.tar.gz
+          for arch in amd64 arm64; do
+            ls dist/*_linux_${arch}.tar.gz dist/*_darwin_${arch}.tar.gz
+            ls dist/*_${arch}.deb dist/*_${arch}.rpm
+          done
+
+  macos:
+    name: macOS tests (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    env:
+      TMPDIR: /tmp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+      - run: go test -tags=e2e -count=1 ./e2e/...

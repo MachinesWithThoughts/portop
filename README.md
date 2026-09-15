@@ -97,8 +97,18 @@ guessing.
 curl -fsSL https://raw.githubusercontent.com/padovanl/portop/main/install.sh | sh
 ```
 
-Detects your arch, verifies the release checksum, and installs to
+Detects Linux or macOS and your architecture, verifies the release checksum,
+and installs to
 `/usr/local/bin` (or `~/.local/bin` if that's not writable).
+
+Release targets:
+
+| System | Architecture | Archive suffix | Native packages |
+|--------|--------------|----------------|-----------------|
+| Linux | Intel/AMD 64-bit | `linux_amd64.tar.gz` | `.deb`, `.rpm` |
+| Linux | ARM64 | `linux_arm64.tar.gz` | `.deb`, `.rpm` |
+| macOS | Intel | `darwin_amd64.tar.gz` | — |
+| macOS | Apple Silicon | `darwin_arm64.tar.gz` | — |
 
 ### `.deb` package (Debian/Ubuntu and derivatives)
 
@@ -107,7 +117,61 @@ curl -fLO https://github.com/padovanl/portop/releases/latest/download/portop_<ve
 sudo dpkg -i portop_<version>_linux_amd64.deb
 ```
 
-### Binary tarball (any Linux distro)
+### Fedora / RHEL / openSUSE (RPM)
+
+Download the `.rpm` for your architecture from [Releases](https://github.com/padovanl/portop/releases):
+
+```sh
+sudo dnf install ./portop_<version>_linux_amd64.rpm
+# openSUSE: sudo zypper install ./portop_<version>_linux_amd64.rpm
+```
+
+### macOS (Apple Silicon and Intel)
+
+The one-line installer detects your Mac's architecture, downloads the matching
+archive and verifies its checksum:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/padovanl/portop/main/install.sh | sh
+portop
+```
+
+For a manual installation, choose `darwin_arm64` for Apple Silicon or
+`darwin_amd64` for Intel. Replace `<version>` with the release number:
+
+```sh
+archive="portop_<version>_darwin_arm64.tar.gz" # Intel: use darwin_amd64
+curl -fLO "https://github.com/padovanl/portop/releases/latest/download/$archive"
+tar -xzf "$archive"
+sudo mkdir -p /usr/local/bin
+sudo install -m 755 portop /usr/local/bin/portop
+portop
+```
+
+#### First launch: if macOS blocks portop
+
+The release binaries are not notarized by Apple. If you downloaded the archive
+with a browser, macOS may block its first launch. After checking that the binary
+comes from this repository's release, use the approval flow for this app:
+
+1. Try running `portop`. If a **“portop” Not Opened** dialog appears, click **Done**.
+2. Open **System Settings → Privacy & Security**. Find the message about
+   portop and click **Open Anyway** (or **Allow Anyway**, depending on macOS).
+3. Run `portop` again if prompted, confirm **Open Anyway**, and authenticate
+   when macOS asks.
+
+This follows the first-launch guidance used by
+[pkgtui](https://padovanl.github.io/pkgtui/#install). See also
+[Apple's instructions for opening an app from an unidentified developer](https://support.apple.com/en-us/102445).
+
+#### Visibility and platform differences
+
+The scanner uses `/usr/sbin/lsof`; process details and CPU sampling use `/bin/ps`.
+Run `sudo portop` to include processes belonging to other users. Without it,
+some sockets can be omitted entirely. Systemd and Docker Desktop VM process
+metadata are unavailable; the process detail thread count is shown as `-`.
+
+### Binary tarball (Linux and macOS)
 
 ```bash
 curl -fLO https://github.com/padovanl/portop/releases/latest/download/portop_<version>_linux_amd64.tar.gz
@@ -213,24 +277,33 @@ exactly as you wrote them.
 
 ## 🔧 How it works
 
-portop reads `/proc/net/{tcp,tcp6,udp,udp6}` for the socket table and walks
+On Linux, portop reads `/proc/net/{tcp,tcp6,udp,udp6}` for the socket table and walks
 `/proc/<pid>/fd` to match socket inodes to owning processes — the same
 technique `lsof`/`ss` use, no root required beyond what's needed to see
 other users' processes. systemd unit and Docker container association are
 derived from each process's cgroup path, so no D-Bus or Docker SDK
 dependency is needed; Docker container names are resolved via a couple of
 read-only calls to the Docker Engine API over its unix socket when
-available. Well-known port names come from parsing `/etc/services`, and
-baseline diffing just snapshots the `LISTEN` set to a small JSON file under
-your OS's config directory.
+available.
+
+On macOS, portop parses the machine-readable output of `lsof` for TCP/UDP
+sockets and their owning processes. `ps` supplies cumulative CPU time and
+process details; CPU usage is calculated between successive samples, once
+per PID per scan. System commands run with a timeout and a fixed locale.
+
+On both platforms, well-known port names come from `/etc/services`, and
+baseline diffing snapshots the `LISTEN` set to a small JSON file under your
+OS's config directory.
 
 ## ✅ Requirements
 
-- **Linux only.** The scanner reads `/proc/net` directly — there's no
-  `/proc` on macOS or Windows, so portop doesn't ship builds for either.
+- **Linux and macOS.** Linux uses `/proc/net`; macOS uses `lsof` and `ps`.
+  Windows is not supported. macOS scans and CPU sampling invoke system tools
+  and may be slower on machines with many processes.
 - `sudo`/root only if you want to see sockets owned by other users (e.g.
   root's `docker-proxy`) — portop runs fine without it, it just can't
-  resolve those specific rows.
+  resolve those specific rows on Linux. On macOS, sockets belonging to
+  other users can be omitted entirely without sufficient permissions.
 - Go 1.24+ only if building from source.
 - A terminal that reports 256-color or truecolor support. A bare
   `TERM=xterm` (no `-256color` suffix) gets detected as a 16-color

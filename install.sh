@@ -27,8 +27,8 @@ need uname
 os="$(uname -s)"
 case "$os" in
   Linux) os=linux ;;
-  Darwin) die "portop is Linux-only: it reads /proc/net directly, which doesn't exist on macOS" ;;
-  *) die "unsupported OS: $os (portop is Linux-only)" ;;
+  Darwin) os=darwin ;;
+  *) die "unsupported OS: $os (supported: Linux and macOS)" ;;
 esac
 
 arch="$(uname -m)"
