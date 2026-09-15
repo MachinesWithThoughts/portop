@@ -64,7 +64,12 @@ func (m Model) renderTitle() string {
 		styleTag.Render(fmt.Sprintf("[%s]", m.ipFilter)) + " " +
 		styleTag.Render(fmt.Sprintf("[sort: %s]", m.sort))
 
-	return badge + tagline + "   " + tags
+	compact := badge + "   " + tags
+	full := badge + tagline + "   " + tags
+	if lipgloss.Width(full) <= innerWidth(m.width) {
+		return full
+	}
+	return compact
 }
 
 func (m Model) renderStatusBar() string {

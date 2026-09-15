@@ -93,7 +93,7 @@ const markerWidth = 2
 func columnsFor(showEstablished bool, width int) []column {
 	core := []column{
 		{"PORT", 11},
-		{"PROTO", 5},
+		{"PROTO", 8},
 		{"STATE", 12},
 		{"PROCESS", 18},
 		{"PID", 7},

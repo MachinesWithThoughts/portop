@@ -149,7 +149,7 @@ func TestMouseWheelMovesAndClampsCursor(t *testing.T) {
 func TestMouseHeaderClickSortsAndTogglesDirection(t *testing.T) {
 	m := mouseTestModel()
 	// PROCESS begins after the marker, PORT, PROTO, and STATE columns.
-	processX := appContentX + markerWidth + 11 + 5 + 12
+	processX := appContentX + markerWidth + 11 + 8 + 12
 
 	model, _ := m.handleMouse(mouseMsg(processX, m.tableHeaderY(), tea.MouseButtonLeft, tea.MouseActionPress))
 	m = model.(Model)
@@ -169,7 +169,7 @@ func TestMouseHeaderClickSortsAndTogglesDirection(t *testing.T) {
 
 func TestMouseCPUHeaderDefaultsToDescending(t *testing.T) {
 	m := mouseTestModel()
-	cpuX := appContentX + markerWidth + 11 + 5 + 12 + 18 + 7
+	cpuX := appContentX + markerWidth + 11 + 8 + 12 + 18 + 7
 
 	model, _ := m.handleMouse(mouseMsg(cpuX, m.tableHeaderY(), tea.MouseButtonLeft, tea.MouseActionPress))
 	m = model.(Model)
