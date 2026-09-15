@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"fmt"
 	"net"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,6 +23,17 @@ func mouseTestModel() Model {
 
 func mouseMsg(x, y int, button tea.MouseButton, action tea.MouseAction) tea.MouseMsg {
 	return tea.MouseMsg(tea.MouseEvent{X: x, Y: y, Button: button, Action: action})
+}
+
+func renderedHeaderY(t *testing.T, m Model) int {
+	t.Helper()
+	for y, line := range strings.Split(m.View(), "\n") {
+		if strings.Contains(line, "PORT") && strings.Contains(line, "PROTO") && strings.Contains(line, "STATE") {
+			return y
+		}
+	}
+	t.Fatal("rendered table header not found")
+	return -1
 }
 
 func TestPageUpAndPageDownMoveByVisiblePage(t *testing.T) {
@@ -72,6 +85,26 @@ func TestMouseClickSelectsVisibleRow(t *testing.T) {
 	}
 	if m.sort != originalSort || m.sortDescending != originalDirection {
 		t.Fatalf("row click changed sort: mode=%v descending=%v", m.sort, m.sortDescending)
+	}
+}
+
+func TestMouseRowsAlignWithRenderedTable(t *testing.T) {
+	for _, width := range []int{80, 100, 120} {
+		t.Run(fmt.Sprintf("width_%d", width), func(t *testing.T) {
+			m := mouseTestModel()
+			m.width = width
+			headerY := renderedHeaderY(t, m)
+			if headerY != m.tableHeaderY() {
+				t.Fatalf("rendered header y = %d, mouse header y = %d", headerY, m.tableHeaderY())
+			}
+
+			want := m.filtered[0]
+			model, _ := m.handleMouse(mouseMsg(appContentX, headerY+2, tea.MouseButtonRight, tea.MouseActionPress))
+			m = model.(Model)
+			if m.mode != modeConfirmKill || m.killTarget.PID != want.PID || keyForRow(m.killTarget) != keyForRow(want) {
+				t.Fatalf("right-click targeted %+v, want first rendered row %+v", m.killTarget, want)
+			}
+		})
 	}
 }
 
@@ -164,6 +197,23 @@ func TestMouseHeaderClickSortsAndTogglesDirection(t *testing.T) {
 	m = model.(Model)
 	if !m.sortDescending || m.filtered[0].ProcessName != "sshd" {
 		t.Fatalf("second PROCESS click should reverse order: descending=%v first=%q", m.sortDescending, m.filtered[0].ProcessName)
+	}
+}
+
+func TestProtocolHeaderRendersBothSortDirections(t *testing.T) {
+	m := mouseTestModel()
+	protocolX := appContentX + markerWidth + 11
+
+	model, _ := m.handleMouse(mouseMsg(protocolX, renderedHeaderY(t, m), tea.MouseButtonLeft, tea.MouseActionPress))
+	m = model.(Model)
+	if view := m.View(); !strings.Contains(view, "PROTO ↑") {
+		t.Fatal("ascending protocol sort indicator is not visible")
+	}
+
+	model, _ = m.handleMouse(mouseMsg(protocolX, renderedHeaderY(t, m), tea.MouseButtonLeft, tea.MouseActionPress))
+	m = model.(Model)
+	if view := m.View(); !strings.Contains(view, "PROTO ↓") {
+		t.Fatal("descending protocol sort indicator is not visible")
 	}
 }
 
