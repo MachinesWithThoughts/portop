@@ -92,6 +92,16 @@ func TestSortRowsByPort(t *testing.T) {
 	}
 }
 
+func TestSortRowsDirectionDescending(t *testing.T) {
+	rows := sampleRows()[:3]
+	sortRowsDirection(rows, sortByPort, true)
+	for i := 1; i < len(rows); i++ {
+		if rows[i-1].LocalPort < rows[i].LocalPort {
+			t.Errorf("rows not sorted by port descending")
+		}
+	}
+}
+
 func TestCursorClampedAfterFilterShrinks(t *testing.T) {
 	m := New(Config{})
 	m.rows = sampleRows()

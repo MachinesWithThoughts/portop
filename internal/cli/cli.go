@@ -216,7 +216,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		KeyOverrides:    fileCfg.Keybindings,
 	}
 
-	p := tea.NewProgram(ui.New(uiCfg), tea.WithAltScreen())
+	p := tea.NewProgram(ui.New(uiCfg), tea.WithAltScreen(), tea.WithMouseAllMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(stderr, "portop: "+err.Error())
 		return 1

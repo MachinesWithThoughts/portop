@@ -169,6 +169,8 @@ func (m Model) renderHelp() string {
 	}{
 		{keys.Up, "move up"},
 		{keys.Down, "move down"},
+		{keys.PageUp, "move one page up"},
+		{keys.PageDown, "move one page down"},
 		{keys.Top, "jump to top"},
 		{keys.Bottom, "jump to bottom"},
 		{keys.Enter, "process details"},

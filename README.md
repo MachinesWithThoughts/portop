@@ -62,7 +62,7 @@ open, inspect or kill it, live.
 - **Live settings screen** (`,`): cycle through **12 built-in themes**
   (default, Dracula, Nord, Solarized, Gruvbox, Catppuccin, Tokyo Night,
   Monokai, Darcula, VS Code Dark+, Ubuntu, mono) with `←`/`→` — the whole
-  UI re-skins as you move — and rebind any of 18 actions on the spot.
+  UI re-skins as you move — and rebind any of 20 actions on the spot.
   Saved automatically; you never touch a file.
 - **`config.yml`** is there too if you'd rather hand-edit it —
   `portop --init-config` writes a fully-commented template.
@@ -152,6 +152,7 @@ reflects whatever's actually bound, including your overrides.
 | Key       | Action                                          |
 |-----------|--------------------------------------------------|
 | `↑` `↓`   | move the cursor                                  |
+| `PgUp` `PgDn` | move one visible page at a time               |
 | `g` `G`   | jump to top / bottom                             |
 | `enter`   | process details                                  |
 | `k`       | kill process (then `y`=SIGTERM, `f`=SIGKILL)     |
@@ -167,6 +168,12 @@ reflects whatever's actually bound, including your overrides.
 | `?`       | help                                             |
 | `q`       | quit                                             |
 
+Mouse support is enabled in compatible terminals: hover highlights rows,
+click selects, drag moves the selection, double-click opens process details,
+right-click opens the kill confirmation, middle-click opens the local URL,
+and the wheel moves through the table. Click any column heading to sort by it;
+click it again to reverse the order.
+
 ## ⚙️ Configuration
 
 Everything below is optional — portop works with no config file at all.
@@ -177,7 +184,7 @@ Press <kbd>,</kbd> inside portop:
 
 - **Theme**: `←`/`→` cycles through it live — the whole UI re-skins as you
   move, no restart, no confirmation needed.
-- **Keybindings**: pick any of the 18 actions, hit `enter`, then press
+- **Keybindings**: pick any of the 20 actions, hit `enter`, then press
   whatever you want it bound to. `esc` cancels instead of capturing.
 - **Reset keybindings to defaults** at the bottom of the list, one keypress.
 
@@ -248,4 +255,3 @@ before pushing.
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).
-
