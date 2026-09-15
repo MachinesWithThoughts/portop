@@ -5,6 +5,7 @@
 #
 # Env overrides:
 #   PORTOP_VERSION=v0.3.0   install a specific tag instead of latest
+#   PORTOP_ARCH=armv6      override detection: amd64, arm64, armv6, armv7
 #   PORTOP_INSTALL_DIR=...  install location (default: /usr/local/bin if
 #                           writable/root, otherwise ~/.local/bin)
 
@@ -31,11 +32,26 @@ case "$os" in
   *) die "unsupported OS: $os (supported: Linux and macOS)" ;;
 esac
 
-arch="$(uname -m)"
-case "$arch" in
-  x86_64|amd64)  arch=amd64 ;;
-  aarch64|arm64) arch=arm64 ;;
-  *) die "unsupported architecture: $arch" ;;
+arch="${PORTOP_ARCH:-}"
+if [ -z "$arch" ]; then
+  machine="$(uname -m)"
+  case "$machine" in
+    x86_64|amd64) arch=amd64 ;;
+    aarch64|arm64)
+      arch=arm64
+      # A 64-bit ARM kernel can host a 32-bit userland (e.g. Raspberry Pi OS).
+      if [ "$os" = linux ] && [ "$(getconf LONG_BIT 2>/dev/null || true)" = 32 ]; then
+        arch=armv7
+      fi
+      ;;
+    armv6l) arch=armv6 ;;
+    armv7l|armv8l) arch=armv7 ;;
+    *) die "unsupported architecture: $machine (Linux: amd64, arm64, armv6, armv7; macOS: amd64, arm64)" ;;
+  esac
+fi
+case "$os/$arch" in
+  linux/amd64|linux/arm64|linux/armv6|linux/armv7|darwin/amd64|darwin/arm64) ;;
+  *) die "unsupported OS/architecture: $os/$arch" ;;
 esac
 
 version="${PORTOP_VERSION:-}"

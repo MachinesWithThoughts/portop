@@ -54,6 +54,9 @@ open, inspect or kill it, live.
   from a cron job or systemd timer) — exits non-zero the instant a port
   that wasn't in your baseline starts listening. Nothing else in this space
   does this as a first-class feature.
+- **Docker Compose port audit**: `--compose /path/to/project` reads the
+  folder's Compose file(s), then reports which configured published ports are
+  listening, unused, or already taken by another process/container.
 - **Scriptable**: `--json` prints a clean snapshot for piping into `jq`,
   dashboards, or your own tooling.
 
@@ -80,6 +83,7 @@ You can. But you'll be doing all of this by hand, every time:
 | Docker container shown        | ❌ | ❌ | ❌ | ✅ |
 | New-port alerts               | ❌ | ❌ | ❌ | ✅ |
 | Baseline drift / audit mode   | ❌ | ❌ | ❌ | ✅ |
+| Docker Compose port audit     | ❌ | ❌ | ❌ | ✅ |
 | Fuzzy filter/search           | ❌ | ❌ | ❌ | ✅ |
 | Themeable / remappable        | ❌ | ❌ | ❌ | ✅ |
 
@@ -101,16 +105,60 @@ Detects Linux or macOS and your architecture, verifies the release checksum,
 and installs to
 `/usr/local/bin` (or `~/.local/bin` if that's not writable).
 
-Release targets:
+### All supported architectures
 
-| System | Architecture | Archive suffix | Native packages |
-|--------|--------------|----------------|-----------------|
-| Linux | Intel/AMD 64-bit | `linux_amd64.tar.gz` | `.deb`, `.rpm` |
-| Linux | ARM64 | `linux_arm64.tar.gz` | `.deb`, `.rpm` |
-| macOS | Intel | `darwin_amd64.tar.gz` | — |
-| macOS | Apple Silicon | `darwin_arm64.tar.gz` | — |
+Every archive is named `portop_<version>_<target>.tar.gz`. These are the complete
+release targets; Linux also gets `.deb` and `.rpm` files with the same target suffix.
+
+| System | Architecture | Target | Packages | Requirements |
+|--------|--------------|--------|----------|--------------|
+| Linux | Intel/AMD 64-bit | `linux_amd64` | `.tar.gz`, `.deb`, `.rpm` | 64-bit x86 OS; amd64 baseline (v1). |
+| Linux | ARM64 / AArch64 (64-bit) | `linux_arm64` | `.tar.gz`, `.deb`, `.rpm` | 64-bit ARM OS; ARMv8.0 baseline. |
+| Linux | ARMv7 (32-bit) | `linux_armv7` | `.tar.gz`, `.deb`, `.rpm` | 32-bit ARM Linux with hardware floating point (VFPv3). |
+| Linux | ARMv6 (32-bit) | `linux_armv6` | `.tar.gz`, `.deb`, `.rpm` | 32-bit ARM Linux with hardware floating point (VFP); includes the CPU target used by original Pi 1 / Zero. |
+| macOS | Intel (64-bit) | `darwin_amd64` | `.tar.gz` | 64-bit Intel Mac; no 32-bit macOS build. |
+| macOS | Apple Silicon (64-bit) | `darwin_arm64` | `.tar.gz` | Native ARM64 Mac; no Rosetta required. |
+
+#### ARM selection and package limitations
+
+- Choose for the **installed OS**, not just the CPU: a 64-bit board running a
+  32-bit OS needs `armv7` (or `armv6` on older CPUs), not `arm64`.
+- The installer maps `armv6l` to `armv6`, `armv7l`/`armv8l` to `armv7`, and
+  `aarch64`/`arm64` to `arm64`. On Linux it checks `getconf LONG_BIT` to detect
+  a 32-bit userland on an ARM64 kernel. If `getconf` is unavailable, it uses
+  the kernel architecture; override detection for unusual containers or OS setups:
+
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/padovanl/portop/main/install.sh -o install.sh
+  PORTOP_ARCH=armv7 sh install.sh
+  ```
+
+  Valid overrides: `amd64`, `arm64`, `armv6`, `armv7`; macOS accepts only the first two.
+- ARMv6 and ARMv7 releases require hardware floating point. ARMv5, ARM soft-float
+  (`armel`), big-endian ARM, 32-bit x86, Windows and other unlisted targets are
+  **not supported by these releases**. ARM64 requires a 64-bit OS; a 32-bit
+  compatibility layer on a 64-bit kernel is not guaranteed.
+- Both ARM32 DEBs have `armhf` metadata, but their filenames distinguish `armv6`
+  and `armv7`. Pick the variant your CPU supports; install only one. Distribution
+  support for ARMv6 varies. RPM architecture labels may be rejected by a particular
+  distribution: use its matching package or the `.tar.gz`, not a forced installation.
+  RPM labels are `x86_64`, `aarch64`, `armv6hl` and `armv7hl`, respectively.
+- Prebuilt binaries do not require Go or a C runtime installation (`CGO_ENABLED=0`).
+  Old board images may still have kernels too old for the Go runtime; see
+  [Go's OS requirements](https://go.dev/wiki/MinimumRequirements). CPU compatibility
+  does not imply support for every historical Linux image or macOS version.
+- Linux requires readable `/proc/net` tables. Containers show their own network
+  namespace; root may be needed for process ownership, and systemd/Docker enrichment
+  is available only when those services and their metadata are accessible.
+- macOS requires the system `lsof` and `ps`, can omit other users' sockets without
+  `sudo`, and does not expose systemd, Docker Desktop VM process metadata or thread
+  counts. Its scans may be slower; see the first-launch Gatekeeper instructions below.
+- Build and emulation checks do not replace testing on physical ARM hardware or a
+  native Mac. See [validation status](docs/platform-support.md) for what has been run.
 
 ### `.deb` package (Debian/Ubuntu and derivatives)
+
+Replace `linux_amd64` with the target from the table above for ARM systems.
 
 ```bash
 curl -fLO https://github.com/padovanl/portop/releases/latest/download/portop_<version>_linux_amd64.deb
@@ -119,7 +167,9 @@ sudo dpkg -i portop_<version>_linux_amd64.deb
 
 ### Fedora / RHEL / openSUSE (RPM)
 
-Download the `.rpm` for your architecture from [Releases](https://github.com/padovanl/portop/releases):
+Download the `.rpm` for your target from [Releases](https://github.com/padovanl/portop/releases).
+In the examples below, replace `linux_amd64` with `linux_arm64`, `linux_armv7` or
+`linux_armv6` as appropriate:
 
 ```sh
 sudo dnf install ./portop_<version>_linux_amd64.rpm
@@ -173,6 +223,8 @@ metadata are unavailable; the process detail thread count is shown as `-`.
 
 ### Binary tarball (Linux and macOS)
 
+Replace `linux_amd64` with any target in the architecture table above.
+
 ```bash
 curl -fLO https://github.com/padovanl/portop/releases/latest/download/portop_<version>_linux_amd64.tar.gz
 tar -xzf portop_<version>_linux_amd64.tar.gz
@@ -198,6 +250,9 @@ portop --watch-new       # desktop-notify when a new port starts listening
 portop --save-baseline   # remember which ports are currently listening
 portop --diff            # compare live ports against the saved baseline
                           # (exit code 3 if something changed — great for cron)
+
+portop --compose ./stack  # audit Compose published ports in a project folder
+portop --compose ./stack --json
 ```
 
 Run `portop --help` for the full flag list.
@@ -206,6 +261,39 @@ Run `portop --help` for the full flag list.
 > `systemd-resolved`, ...) — the same limitation `lsof`/`ss -p` have without
 > `sudo`. portop tells you when that's happening instead of leaving you to
 > guess.
+
+### Docker Compose port audit
+
+Point portop at a folder containing `compose.yml`, `compose.yaml`,
+`docker-compose.yml` or `docker-compose.yaml`:
+
+```bash
+portop --compose ~/selfhosted/crawl-stack
+```
+
+It parses each service's `ports:` entries and checks fixed published ports
+against the host's current listeners. Status values are:
+
+| Status | Meaning |
+|--------|---------|
+| `expected` | Docker reports the port on the matching Compose service/container, or the listener's container name matches. |
+| `conflict` | Something is listening, but it is not identified as the expected Compose service. |
+| `unused` | The Compose file configures the port, but nothing is listening on it. |
+| `dynamic` | Compose will choose the host port at runtime, so there is no fixed port to check. |
+
+`--compose` exits `3` when it finds `conflict` or `unused`, and `0` when every
+fixed port is accounted for. Add `--json` for scripts.
+
+When Docker is accessible, the audit also reads Docker's published-port table
+and Compose labels. That means it can identify the expected service even when
+the local socket row belongs to `docker-proxy`. Without Docker access, it still
+checks whether the port is listening, but may report a conflict because the
+expected container/service cannot be confirmed. Supported `ports:` forms include
+short syntax (`"8080:80"`, `"127.0.0.1:8080:80/udp"`, simple ranges) and long
+syntax (`published`, `target`, `host_ip`, `protocol`). Compose profiles,
+environment interpolation and complex multi-file merge semantics are not
+expanded by portop itself; use the generated JSON output if you need to compare
+against a custom `docker compose config` workflow.
 
 ### Keybindings
 
@@ -285,6 +373,11 @@ derived from each process's cgroup path, so no D-Bus or Docker SDK
 dependency is needed; Docker container names are resolved via a couple of
 read-only calls to the Docker Engine API over its unix socket when
 available.
+
+`portop --compose DIR` adds one Docker-specific read-only call to
+`/containers/json?all=1` when Docker enrichment is enabled. That gives the audit
+the daemon's published-port view and Compose labels, so it can map a host port
+back to the Compose service even if the listener process is `docker-proxy`.
 
 On macOS, portop parses the machine-readable output of `lsof` for TCP/UDP
 sockets and their owning processes. `ps` supplies cumulative CPU time and

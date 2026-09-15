@@ -18,6 +18,13 @@ builds:
     goarch:
       - amd64
       - arm64
+      - arm
+    goarm:
+      - "6"
+      - "7"
+    ignore:
+      - goos: darwin
+        goarch: arm
     ldflags:
       - -s -w
       - -X github.com/padovanl/portop/internal/cli.Version={{.Version}}
@@ -27,7 +34,7 @@ archives:
     ids: [portop]
     formats: [tar.gz]
     name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if eq .Arch "arm" }}v{{ .Arm }}{{ end }}
     files:
       - README.md
       - LICENSE
@@ -36,6 +43,8 @@ nfpms:
   - id: packages
     ids: [portop]
     package_name: portop
+    # ARMv6 and ARMv7 both use armhf in DEB metadata; keep filenames distinct.
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if eq .Arch "arm" }}v{{ .Arm }}{{ end }}'
     vendor: portop
     homepage: https://github.com/padovanl/portop
     maintainer: Luca Padovan <padovan.93@gmail.com>
